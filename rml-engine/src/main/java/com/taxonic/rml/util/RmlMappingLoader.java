@@ -1,5 +1,6 @@
 package com.taxonic.rml.util;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -7,7 +8,7 @@ import java.util.function.Function;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.Resource;
-
+import org.eclipse.rdf4j.rio.RDFFormat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.taxonic.rml.model.TermType;
@@ -30,20 +31,26 @@ public class RmlMappingLoader {
 
 	// TODO: PM: shouldn't the return type be Set?
 	public List<TriplesMap> load(String resource) {
-
-		Model originalModel = IoUtils.parse(resource);
-		
+		Model originalModel = IoUtils.parse(resource);		
+		return load(originalModel);		
+	}
+	
+	public List<TriplesMap> load(InputStream input, RDFFormat rdfFormat) {
+		Model originalModel = IoUtils.parse(input, rdfFormat);
+		return load(originalModel);
+	}
+	
+	public List<TriplesMap> load(Model model) {
 		return 
 			ImmutableList.copyOf(
 				RdfObjectLoader.load(
 					selectTriplesMaps, 
 					TriplesMapImpl.class, 
-					originalModel, 
+					model, 
 					shorthandExpander,
 					this::addTermTypes
 				)
 			);
-		
 	}
 	
 	private void addTermTypes(MappingCache cache) {

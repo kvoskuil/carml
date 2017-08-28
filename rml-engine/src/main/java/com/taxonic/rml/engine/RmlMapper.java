@@ -52,13 +52,14 @@ public class RmlMapper {
 	private TermGeneratorCreator termGenerators = TermGeneratorCreator.create(this); // TODO
 
 	private Functions functions = new Functions(); // TODO
-
+	
 	public RmlMapper(
 		Function<String, InputStream> sourceResolver
 	) {
 		this.sourceResolver = sourceResolver;
 	}
 
+	// TODO: PM: support multiple function classes. This way it can be easily extended
 	public void addFunctions(Object fn) {
 		functions.addFunctions(fn);
 	}
@@ -66,12 +67,16 @@ public class RmlMapper {
 	public Optional<ExecuteFunction> getFunction(IRI iri) {
 		return functions.getFunction(iri);
 	}
+	
+	public Model map (List<TriplesMap> mapping) {
+		return map(mapping, null);
+	}
 
-	public Model map(List<TriplesMap> mapping) {
+	public Model map(List<TriplesMap> mapping, InputStream input) {
 		Model model = new LinkedHashModel();
 		mapping.stream()
 			.filter(m -> !isTriplesMapOnlyUsedAsFunctionValue(m, mapping))
-			.forEach(m -> map(m, model));
+			.forEach(m ->map(m, model, input));
 		return model;
 	}
 	
@@ -105,8 +110,8 @@ public class RmlMapper {
 		
 	}
 	
-	private void map(TriplesMap triplesMap, Model model) {
-		TriplesMapper triplesMapper = createTriplesMapper(triplesMap); // TODO cache mapper instances
+	private void map(TriplesMap triplesMap, Model model, InputStream input) {
+		TriplesMapper triplesMapper = createTriplesMapper(triplesMap, input); // TODO cache mapper instances
 		triplesMapper.map(model);
 	}
 	
@@ -217,6 +222,7 @@ public class RmlMapper {
 	}
 	
 	SubjectMapper createSubjectMapper(TriplesMap triplesMap) {
+		// TODO: NullPointerException. Can we predict and avoid?
 		SubjectMap subjectMap = triplesMap.getSubjectMap();
 		return
 		new SubjectMapper(
@@ -227,7 +233,7 @@ public class RmlMapper {
 		);
 	}
 	
-	private TriplesMapper createTriplesMapper(TriplesMap triplesMap) {
+	private TriplesMapper createTriplesMapper(TriplesMap triplesMap, InputStream input) {
 		
 		LogicalSource logicalSource = triplesMap.getLogicalSource();
 		
@@ -235,18 +241,32 @@ public class RmlMapper {
 		
 		// TODO this all assumes json
 		
-		Supplier<Object> getSource = () -> readSource(logicalSource.getSource());
+		InputStream source = 
+				logicalSource.getSource().equals("http://carml.org/InputStream") ? 
+						input : 
+						sourceResolver.apply(logicalSource.getSource());
 		
 		String iterator = logicalSource.getIterator();
-		UnaryOperator<Object> applyIterator =
-			s -> JsonPath.read((String) s, iterator);
+		Function<InputStream, Object> applyIterator =
+			s -> {
+				try {
+					Object iteration = JsonPath.read(s, iterator);
+					// Reset for next triples map
+					s.reset();
+					return iteration;
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				return s;
+			};
 			
 		Function<Object, EvaluateExpression> expressionEvaluatorFactory =
 			object -> expression -> JsonPath.read(object, expression);
 		
 		return
 		new TriplesMapper(
-			getSource,
+			source,
 			applyIterator,
 			expressionEvaluatorFactory,
 			createSubjectMapper(triplesMap)
@@ -260,7 +280,6 @@ public class RmlMapper {
 //		logicalSource.getReferenceFormulation();
 		
 		// TODO this all assumes json
-		
 		Supplier<Object> getSource = () -> readSource(logicalSource.getSource());
 		
 		String iterator = logicalSource.getIterator();

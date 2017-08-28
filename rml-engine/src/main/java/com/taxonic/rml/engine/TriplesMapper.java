@@ -1,5 +1,6 @@
 package com.taxonic.rml.engine;
 
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -9,18 +10,18 @@ import org.eclipse.rdf4j.model.Model;
 
 class TriplesMapper {
 	
-	private Supplier<Object> getSource;
-	private UnaryOperator<Object> applyIterator;
+	private InputStream source;
+	private Function<InputStream, Object> applyIterator;
 	private Function<Object, EvaluateExpression> expressionEvaluatorFactory;
 	private SubjectMapper subjectMapper;
 	
 	TriplesMapper(
-		Supplier<Object> getSource,
-		UnaryOperator<Object> applyIterator,
+		InputStream source,
+		Function<InputStream, Object> applyIterator,
 		Function<Object, EvaluateExpression> expressionEvaluatorFactory,
 		SubjectMapper subjectMapper
 	) {
-		this.getSource = getSource;
+		this.source = source;
 		this.applyIterator = applyIterator;
 		this.expressionEvaluatorFactory = expressionEvaluatorFactory;
 		this.subjectMapper = subjectMapper;
@@ -36,7 +37,6 @@ class TriplesMapper {
 	}
 	
 	void map(Model model) {
-		Object source = getSource.get();
 		Object value = applyIterator.apply(source);
 		Iterable<?> iterable = createIterable(value);
 		iterable.forEach(e -> map(e, model));

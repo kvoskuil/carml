@@ -237,7 +237,7 @@ public class MapperImpl implements Mapper, MappingCache {
 		// if property is a string, get Literal label
 		// TODO @RdfTypeAdapter should be possible here as well. maybe the other stuff below as well?
 		else if (String.class.isAssignableFrom(elementType))
-			valueTransformer = (m, v) -> ((Literal) v).getLabel();
+			valueTransformer = (m, v) -> v.stringValue();
 		
 		// TODO more primitive types
 		
