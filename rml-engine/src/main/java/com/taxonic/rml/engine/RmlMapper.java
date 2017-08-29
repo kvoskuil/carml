@@ -20,8 +20,9 @@ import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.impl.LinkedHashModel;
-
+import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
 import com.taxonic.rml.engine.function.ExecuteFunction;
 import com.taxonic.rml.engine.function.Functions;
 import com.taxonic.rml.model.BaseObjectMap;
@@ -48,6 +49,9 @@ import com.taxonic.rml.model.TriplesMap;
 public class RmlMapper {
 
 	private Function<String, InputStream> sourceResolver;
+	
+	private static Configuration JSONPATH_CONF = Configuration.builder()
+			   .options(Option.DEFAULT_PATH_LEAF_TO_NULL).build();
 	
 	private TermGeneratorCreator termGenerators = TermGeneratorCreator.create(this); // TODO
 
@@ -250,7 +254,7 @@ public class RmlMapper {
 		Function<InputStream, Object> applyIterator =
 			s -> {
 				try {
-					Object iteration = JsonPath.read(s, iterator);
+					Object iteration = JsonPath.using(JSONPATH_CONF).parse(s).read(iterator);
 					// Reset for next triples map
 					s.reset();
 					return iteration;
@@ -262,7 +266,7 @@ public class RmlMapper {
 			};
 			
 		Function<Object, EvaluateExpression> expressionEvaluatorFactory =
-			object -> expression -> JsonPath.read(object, expression);
+			object -> expression -> JsonPath.using(JSONPATH_CONF).parse(object).read(expression);
 		
 		return
 		new TriplesMapper(
@@ -284,10 +288,10 @@ public class RmlMapper {
 		
 		String iterator = logicalSource.getIterator();
 		UnaryOperator<Object> applyIterator =
-			s -> JsonPath.read((String) s, iterator);
+			s -> JsonPath.using(JSONPATH_CONF).parse(s).read(iterator);
 			
 		Function<Object, EvaluateExpression> expressionEvaluatorFactory =
-			object -> expression -> JsonPath.read(object, expression);
+			object -> expression -> JsonPath.using(JSONPATH_CONF).parse(object).read(expression);
 		
 		return
 		new ParentTriplesMapper(

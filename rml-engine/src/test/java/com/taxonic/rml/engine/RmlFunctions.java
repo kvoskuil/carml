@@ -37,4 +37,6 @@ public class RmlFunctions {
 		return inputString.toLowerCase();
 	}
 	
+	//TODO: PM: Add test for when parameter is not found
+	//TODO: PM: Add test for when function returns null
 }
